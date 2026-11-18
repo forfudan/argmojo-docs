@@ -1,0 +1,25 @@
+name: Build the book
+
+# Cloudflare Workers builds and serves the site (see README.md). This workflow
+# only checks that the book builds. Cloudflare rebuilds the site by itself on a
+# push here; argmojo asks for a rebuild when the manual changes there.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The manual comes from ARGMOJO_REF in scripts/build.sh. No mdbook is
+      # installed here, so the script downloads the pinned release.
+      - name: Split the manual and build the book
+        run: bash scripts/build.sh
