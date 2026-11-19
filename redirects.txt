@@ -1,0 +1,4 @@
+# Pages that were renamed or merged into another page, as "old new". The
+# build writes a small page at each old path that sends the reader to the new
+# one, but only once the old page is gone, so this file and the manual can
+# change in either order.
