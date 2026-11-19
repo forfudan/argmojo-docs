@@ -2,3 +2,9 @@
 # build writes a small page at each old path that sends the reader to the new
 # one, but only once the old page is gone, so this file and the manual can
 # change in either order.
+builder-overview.html builder-cheat-sheet.html
+flag-variants.html count-and-negatable-flags.html
+help-and-display.html help-output.html
+parsing-behaviour.html parsing-rules.html
+usage-line.html help-output.html#custom-usage-line
+confirmation-option.html confirmation-prompt.html
