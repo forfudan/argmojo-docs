@@ -38,6 +38,7 @@ Only the Python standard library is used.
 """
 
 import argparse
+import html
 import os
 import posixpath
 import re
@@ -325,11 +326,19 @@ HEADER = (
 )
 
 # Readers often land on a page from a search, so a page with examples says
-# what they assume. A page that imports from argmojo itself does not need it.
-IMPORT_NOTE = (
-    '<p class="page-note">Examples on this page assume '
-    "<code>from argmojo import Argument, Command</code>.</p>"
+# what they assume: the import (unless the page imports from argmojo itself),
+# and what `command` and `result` are (when the page uses them without making
+# them), with a link to the section that makes them.
+IMPORT_NOTE = "<code>from argmojo import Argument, Command</code>"
+NAMES_NOTE = (
+    'that <code>command</code> is a <code>Command</code> and <code>result</code> is '
+    'what <code>command.parse()</code> returns (see <a href="%s">%s</a>)'
 )
+# The manual's section that makes `command` and `result`, by GitHub anchor.
+NAMES_ANCHOR = "creating-a-command"
+NAMES_TITLE = "Creating a Command"
+USES_NAMES = re.compile(r"\b(command|result)\.")
+MAKES_COMMAND = re.compile(r"\bvar command\b")
 
 # Where the page comes from: the manual at the line the page starts, and the
 # argmojo branch or tag the book was built from.
@@ -341,17 +350,31 @@ SOURCE_NOTE = (
 )
 
 
-def notes(page, lines, ref):
-    """Adds the import note under the first heading, and the source note."""
+def notes(page, lines, ref, where):
+    """Adds the note on what examples assume, under the first heading, and
+    the source note at the end."""
     code = "\n".join(l for l, c in page["lines"] if c)
     text = "\n".join(l for l, _ in page["lines"])
+    assume = []
     if "```mojo" in code and "from argmojo import" not in text:
+        assume.append(IMPORT_NOTE)
+    if USES_NAMES.search(code) and not MAKES_COMMAND.search(code):
+        file, slug, first = where[NAMES_ANCHOR]
+        url = posixpath.relpath(file, posixpath.dirname(page["file"]) or ".")
+        url = url[: -len(".md")] + ".html" + ("" if first else "#" + slug)
+        if file == page["file"]:
+            url = "#" + slug
+        assume.append(NAMES_NOTE % (html.escape(url), NAMES_TITLE))
+    if assume:
+        note = '<p class="page-note">Examples on this page assume %s.</p>' % (
+            ", and ".join(assume)
+        )
         first = next(i for i, l in enumerate(lines) if HEADING.match(l))
-        lines[first + 1 : first + 1] = ["", IMPORT_NOTE]
+        lines[first + 1 : first + 1] = ["", note]
     lines += ["", SOURCE_NOTE % (REPO, ref, ref, REPO, ref, MANUAL, page["line"])]
 
 
-def write(pages, out, ref):
+def write(pages, out, ref, where):
     if os.path.isdir(out):
         for base, _, names in os.walk(out):
             for name in names:
@@ -367,7 +390,7 @@ def write(pages, out, ref):
             lines.pop(0)
         while lines and not lines[-1].strip():
             lines.pop()
-        notes(page, lines, ref)
+        notes(page, lines, ref, where)
         path = os.path.join(out, *page["file"].split("/"))
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
@@ -387,7 +410,7 @@ def split(text, out, ref):
             where[anchor] = (page["file"], slug, anchor == page["first_anchor"])
     for page in pages:
         relink(page, where, ref)
-    write(pages, out, ref)
+    write(pages, out, ref, where)
     return pages
 
 
